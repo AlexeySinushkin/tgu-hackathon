@@ -1,8 +1,7 @@
-# PythonProjectBack
+# Python GPS Server
 
 ## About
-Программа на Python, которая является backend сервером. В данной программе можно загружать фото в базу данных
-и потом из обрабатывать для работы с CV.
+Программа на Python, которая является backend сервером. В данной программе можно загружать данные GPS в DB и потом работать с этими данными.
 
 ## Warning
 
@@ -34,4 +33,4 @@ python -m uvicorn app.main:app --reload
 docker compose up --build
 ```
 После установки будет доступ к backend по адресу:
-http://localhost:8000
+http://localhost:8000/docs
