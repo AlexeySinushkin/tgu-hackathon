@@ -1,0 +1,36 @@
+services:
+  database:
+    image: postgres:17
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: pyserv
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: pyservdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-roles-and-permissions.sql:/docker-entrypoint-initdb.d/init-roles-and-permissions.sql
+    networks:
+      - app_network
+
+  backend:
+    build:
+      context: .
+    container_name: fastapi_backend_gps
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://pyserv:admin@database:5432/pyservdb
+    depends_on:
+      - database
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge
