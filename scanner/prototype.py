@@ -44,10 +44,12 @@ while True:
     if 0 < spent_ms < period:
         sleep((period-spent_ms)/1000)
 
-    # Esc
+
     key = cv2.waitKey(1)
+    # Space
     if key == 32:
         stepping_mode = not stepping_mode
+    # Esc
     if key == 27:
         cv2.destroyAllWindows()
         break
