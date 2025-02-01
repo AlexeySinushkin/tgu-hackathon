@@ -11,9 +11,10 @@ from datetime import date  # Импортируем date
 from starlette.responses import JSONResponse
 
 import utility.database as database
-import handler.imageProcessor as imgProc
+#import handler.imageProcessor as imgProc
 from utility.utility import SingletonLogger, LogExecutionTime
-
+from handler.NeuroImageHandler import NeuroImageHandler
+import json
 app = FastAPI(
     title="Image Processing API",
     description="API для загрузки изображений, применения фильтров и работы с базой данных изображений.",
@@ -101,3 +102,43 @@ async def db_fetch_only_id_coordinate():
     db_handler = database.DatabaseCRUD()
     db_ids = db_handler.get_only_ids()
     return db_ids
+
+@app.put("/upload-image", summary="Загрузка фото в DB", description="Загружает фото и возвращает ID с DB.") #PUT используется для создания или обновления ресурса на сервере
+async def img_work(file: UploadFile = File(...)):
+    logger = SingletonLogger().get_logger()
+    logger.info(f"/upload-image request {file.filename}")
+
+    # Читаем содержимое загруженного файла
+    contents = await file.read()
+    neuro_handler = NeuroImageHandler()
+
+    img_boxes = neuro_handler.process_image(contents)
+    if not img_boxes:  # Check if boxes list is empty
+        logger.error("No objects detected")
+        return JSONResponse(
+            content={"boxes": None},
+            headers={"imgDB_ID": "Null"}
+        )
+
+    logger.info("Object detected")
+    image_db = database.ImageDatabaseCRUD()
+
+    # Конвертируем байты в изображение OpenCV
+    np_arr = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+
+    # Конвертируем bounding boxes в JSON-совместимый формат
+    json_serializable_boxes = [box.xyxy.cpu().numpy().tolist() for box in img_boxes]
+
+    # Сохраняем изображение в базу данных
+    image_id = image_db.create_image(file.filename, image, json.dumps(json_serializable_boxes))
+    if image_id is None:
+        logger.error("Failed to save image")
+        return JSONResponse(content={"error": "Failed to save image to database"}, status_code=500)
+    logger.info(f"Boxes: {json.dumps(json_serializable_boxes)}")  # Логируем красиво
+
+    return JSONResponse(
+        content={"boxes": json_serializable_boxes},
+        headers={"imgDB_ID": str(image_id)}
+    )
