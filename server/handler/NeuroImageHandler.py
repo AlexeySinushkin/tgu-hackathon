@@ -18,7 +18,7 @@ import io
 #         coords = box.xyxy.cpu().numpy()  # Coordinates of the bounding box (x1, y1, x2, y2)
 #         print(f"Class: {cls}, Confidence: {conf:.2f}, Coordinates: {coords}")
 
-class NeuroImageHandler():
+class NeuroImageHandler:
     def __init__(self):
         self.model = YOLO("handler/yolo11n_road_damage.pt")
 
@@ -28,7 +28,7 @@ class NeuroImageHandler():
         # Декодируем изображение с помощью OpenCV
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         # Выполняем предсказание с использованием модели YOLO
-        results = self.model.predict(source=img, save=True, imgsz=640)
+        results = self.model.predict(source=img, save=False, imgsz=640)
         all_boxes = []
         for result in results:
             boxes = result.boxes  # Список всех обнаруженных объектов (bounding boxes)
