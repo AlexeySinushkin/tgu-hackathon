@@ -1,4 +1,5 @@
 import numpy as np
+from pyasn1_modules.rfc5280 import anotherNameMap
 from scipy.optimize import curve_fit
 
 #реализация корреляционной функции для референсного ряда
@@ -62,4 +63,30 @@ def ref_corel_calculate(hist1, hist2):
     if center1<center2:
         return ref_corel_calculate_ranges((left1, right1, delta1), (left2, right2, delta2))
     return ref_corel_calculate_ranges((left2, right2, delta2), (left1, right1, delta1))
+
+
+
+
+def second_color_intensity(target_hist, ref_hist):
+    # Если целевая гистограмма шире (есть не только монотонный цвет асфальта, но и темный цвет ямы или светлый
+    # цвет отраженного неба в луже), то это наш случай - иначе нет второго цвета
+    target_left, target_right = get_left_right_index(target_hist)
+    if target_left is None or target_right is None:
+        return 0.0
+    target_delta = target_right - target_left
+    ref_left, ref_right = get_left_right_index(ref_hist)
+    ref_delta = ref_right - ref_left
+    if target_delta <= ref_delta:
+        return 0.0
+    #проходим по референсной гистограмме и стираем значения в этих точках на целевой
+    non_zero_indices = np.where(ref_hist > 0)[0]
+    target_copy = np.copy(target_hist)
+    target_copy[non_zero_indices] = 0
+
+    another_color_index =  np.where(target_copy > 0)[0]
+    result = np.sum(target_copy[another_color_index])*0.1
+    if result > 1.0:
+        return 1.0
+    return result
+
 

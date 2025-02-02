@@ -3,7 +3,7 @@ import cv2
 from enum import Enum
 import numpy as np
 from matplotlib import pyplot as plt
-from correlation import ref_corel_calculate
+from correlation import ref_corel_calculate, second_color_intensity
 from image_utils import draw_correl_value
 
 cell_size = 20
@@ -36,6 +36,7 @@ class Cell:
         self.width = width
         self.height = height
         self.correlation = None
+        self.second_color_intensity = 0.0
         self.kind = CellKind.UNKNOWN
 
     # получить маленький кусочек изображения, соответствующий этой ячейке
@@ -98,21 +99,18 @@ class PotholeAnalyzer:
                           (0, 0, 0), 1)
         for row in self.search_grid:
             for cell in row:
-                if analyze_success and cell.correlation is not None and cell.correlation<0.3:
+                if analyze_success and cell.second_color_intensity>0.3:
                     # визуализируем корреляцию гистограммы -  чем меньше корреляция, тем выше столбик
-                    correl_value = int(cell.correlation*10)
-                    size = cell_size * cell.correlation
-                    cv2.line(image_for_draw, (cell.x_lt + 1, cell.y_lt ),
-                             (cell.x_lt + 1, int(cell.y_lt + size)),
-                             (0, 0, 0), 2)  # Blue dashed line
+                    correl_value = int(cell.second_color_intensity*10)
                     draw_correl_value(image_for_draw, correl_value, cell.x_lt + 5, int(cell.y_lt+cell_size/2))
-                    # cv2.rectangle(image_for_draw, (cell.x_lt, cell.y_lt), (cell.x_lt + cell_size, cell.y_lt + cell_size), cell.get_color(), 1)
+                    cv2.rectangle(image_for_draw, (cell.x_lt, cell.y_lt), (cell.x_lt + cell_size, cell.y_lt + cell_size), cell.get_color(), 1)
 
     def __reset_cells(self):
         for row in self.search_grid:
             for cell in row:
                 cell.kind = CellKind.UNKNOWN
                 cell.correlation = None
+                cell.second_color_intensity = 0.0
 
     def calculate_reference_row(self, gray_image):
         ref_row_hist = []
@@ -153,10 +151,6 @@ class PotholeAnalyzer:
     def analyze(self, gray_image):
         # Apply Gaussian blur
         gray_image = cv2.GaussianBlur(gray_image, (7, 7), 9)
-        kernel = int(cell_size * 1.5)
-        if kernel % 2 == 0:
-            kernel+=1
-        gray_image = cv2.GaussianBlur(gray_image, (kernel, kernel), 4)
         gray_image, ref_row_hist = self.calculate_reference_row(gray_image)
         left, right, ref_correl = self.calculate_reference_row_correl(ref_row_hist)
         #если ячеек для анализа меньше половины - не может анализировать
@@ -168,7 +162,8 @@ class PotholeAnalyzer:
                 cell_image = cell.crop(gray_image)
                 hist = cv2.calcHist([cell_image], [0], None, [num_bins], color_range)
                 cv2.normalize(hist, hist, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-                cell.correlation = ref_corel_calculate(hist, ref_row_hist[i])
+                #cell.correlation = ref_corel_calculate(hist, ref_row_hist[i])
+                cell.second_color_intensity = second_color_intensity(hist, ref_row_hist[i])
         return True
 
 

@@ -20,7 +20,7 @@ analyzer : PotholeAnalyzer | None = None
 frame_index = 0
 while True:
     if stepping_mode:
-        sleep(0.5)
+        sleep(0.2)
     loop_start = datetime.now()
     ret, original_frame = test_video_stream.read()
     if not ret:
