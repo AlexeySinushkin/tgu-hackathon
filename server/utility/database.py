@@ -288,7 +288,9 @@ class ImageDatabaseCRUD(DatabaseConnection):
             return False
 
     @LogExecutionTime()
-    def create_image(self, filename: str, image: np.ndarray, coords) -> int:
+    def create_image(self, filename: str, image: np.ndarray,  latitude:int,
+                     longitude:int, x_top_left:int, y_top_left:int, width:int, height:int, date:date
+                     ) -> int:
         logger = SingletonLogger().get_logger()
         try:
             _, encoded_image = cv2.imencode('.png', image)
@@ -298,11 +300,11 @@ class ImageDatabaseCRUD(DatabaseConnection):
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        INSERT INTO neurophotos (filename, photo, coordinate)
-                        VALUES (%s, %s, %s::jsonb)
+                        INSERT INTO neurophotos (filename, photo, latitude, longitude, x_top_left, y_top_left, width, height, date)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING id;
                         """,
-                        (filename, binary_data, json.dumps(coords))  # Преобразуем Python-объект в JSON-строку
+                        (filename, binary_data, latitude, longitude, x_top_left, y_top_left, width, height, date)  # Преобразуем Python-объект в JSON-строку
                     )
                     image_id = cur.fetchone()[0]
                     conn.commit()

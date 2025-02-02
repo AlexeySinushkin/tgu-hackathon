@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import cv2
@@ -27,6 +27,13 @@ app = FastAPI(
         "name": "MIT License",
     },
 )
+class GPSUpload(BaseModel):
+    latitude: int
+    longitude: int
+    date: date
+    img: str  # base64-кодированное изображение или URL
+    x_top_left: int
+    y_top_left: int
 
 class GPSRequest(BaseModel):
     gps_id: int
@@ -61,7 +68,7 @@ async def db_test_connection():
     return db_response
 
 @app.post("/push_coordinate", summary="Загрузка данных GPS", description="Возвращает ID в DB")
-async def db_push_coordinate(request : GPSRequest):
+async def db_push_coordinate(request : GPSUpload):
     latitude = request.latitude
     longitude = request.longitude
     app_date = request.date
@@ -104,21 +111,20 @@ async def db_fetch_only_id_coordinate():
     return db_ids
 
 @app.put("/upload-image", summary="Загрузка фото в DB", description="Загружает фото и возвращает ID с DB.") #PUT используется для создания или обновления ресурса на сервере
-async def img_work(file: UploadFile = File(...)):
+async def upload_gps_data(
+    latitude: int = Form(...),
+    longitude: int = Form(...),
+    date: date = Form(...),
+    img: UploadFile = File(...),
+    x_top_left: int = Form(...),
+    y_top_left: int = Form(...)
+):
     logger = SingletonLogger().get_logger()
-    logger.info(f"/upload-image request {file.filename}")
+    logger.info(f"/upload-image request {img.filename}")
 
     # Читаем содержимое загруженного файла
-    contents = await file.read()
-    neuro_handler = NeuroImageHandler()
+    contents = await img.read()
 
-    img_boxes = neuro_handler.process_image(contents)
-    if not img_boxes:  # Check if boxes list is empty
-        logger.error("No objects detected")
-        return JSONResponse(
-            content={"boxes": None},
-            headers={"imgDB_ID": "Null"}
-        )
 
     logger.info("Object detected")
     image_db = database.ImageDatabaseCRUD()
@@ -126,19 +132,23 @@ async def img_work(file: UploadFile = File(...)):
     # Конвертируем байты в изображение OpenCV
     np_arr = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    img_width = image.shape[1]
+    img_height = image.shape[0]
+    #image_id = image_db.create_image(img.filename, image, json.dumps(json_serializable_boxes))
+    image_id = image_db.create_image(filename=img.filename, image=image, latitude=latitude,
+                                     longitude=longitude, date=date, width=img_width, height=img_height,
+                                     x_top_left=x_top_left, y_top_left=y_top_left)
 
 
-    # Конвертируем bounding boxes в JSON-совместимый формат
-    json_serializable_boxes = [box.xyxy.cpu().numpy().tolist() for box in img_boxes]
-
-    # Сохраняем изображение в базу данных
-    image_id = image_db.create_image(file.filename, image, json.dumps(json_serializable_boxes))
-    if image_id is None:
-        logger.error("Failed to save image")
-        return JSONResponse(content={"error": "Failed to save image to database"}, status_code=500)
-    logger.info(f"Boxes: {json.dumps(json_serializable_boxes)}")  # Логируем красиво
-
-    return JSONResponse(
-        content={"boxes": json_serializable_boxes},
-        headers={"imgDB_ID": str(image_id)}
-    )
+    # # Сохраняем изображение в базу данных
+    # image_id = image_db.create_image(img.filename, image, json.dumps(json_serializable_boxes))
+    # if image_id is None:
+    #     logger.error("Failed to save image")
+    #     return JSONResponse(content={"error": "Failed to save image to database"}, status_code=500)
+    # logger.info(f"Boxes: {json.dumps(json_serializable_boxes)}")  # Логируем красиво
+    #
+    # return JSONResponse(
+    #     content={"boxes": json_serializable_boxes},
+    #     headers={"imgDB_ID": str(image_id)}
+    # )
+    return image_id
