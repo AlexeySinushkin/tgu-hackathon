@@ -1,3 +1,5 @@
+import base64
+
 import cv2
 
 
@@ -21,3 +23,11 @@ def draw_correl_value(image, corell_value, x, y_bl):
 
     # Add text to image
     cv2.putText(image, str(corell_value), (x, y_bl), font, font_scale, color, thickness, line_type)
+
+def opencv_to_base64(image):
+    # Encode image as PNG
+    _, buffer = cv2.imencode('.png', image)
+
+    # Convert to Base64
+    base64_str = base64.b64encode(buffer).decode('utf-8')
+    return base64_str
