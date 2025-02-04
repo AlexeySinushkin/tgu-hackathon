@@ -41,6 +41,11 @@ class GPSRequest(BaseModel):
     longitude: float
     date: date
 
+# Создаем модель данных для запроса
+class UpdateStatusRequest(BaseModel):
+    photo_id: int # ID фотографии
+    new_status: bool  # Ожидаемое булево значение
+
 # Настройки CORS
 app.add_middleware(
     CORSMiddleware,
@@ -63,57 +68,14 @@ async def server_info():
     }
 @app.get("/db-test", summary="Информация о доступности DB", description="Возвращает True или False.")
 async def db_test_connection():
-    db_handler = database.DatabaseCRUD()
+    db_handler = database.ImageDatabaseCRUD()
     db_response = db_handler.test_connection()
     return db_response
 
-@app.post("/push_coordinate", summary="Загрузка данных GPS", description="Возвращает ID в DB")
-async def db_push_coordinate(request : GPSUpload):
-    latitude = request.latitude
-    longitude = request.longitude
-    app_date = request.date
-    db_handler = database.DatabaseCRUD()
-    db_id = db_handler.create_data(latitude, longitude, app_date)
-    return db_id
-
-@app.get("/db-fetch", summary="Запрашиваем данные с DB", description="Возвращает ID, Latitude, Longitude, Date")
-async def db_fetch_coordinate(db_id: int):
-    db_handler = database.DatabaseCRUD()
-    db_response = db_handler.read_data(db_id)
-    return db_response
-
-@app.post("/update_coordinate", summary="Обновляем данных GPS", description="Возвращает True или False.")
-async def db_update_coordinate(request : GPSRequest):
-    latitude = request.latitude
-    longitude = request.longitude
-    app_date = request.date
-    gps_id = request.gps_id
-    db_handler = database.DatabaseCRUD()
-    db_response = db_handler.update_data(gps_id, latitude, longitude, app_date)
-    return db_response
-
-@app.post("/db-delete", summary="Удаляем данные из DB по ID", description="Возвращает True или False.")
-async def db_delete_coordinate(db_id: int):
-    db_handler = database.DatabaseCRUD()
-    db_response = db_handler.delete_date(db_id)
-    return db_response
-
-@app.get("/db-fetch-all-id", summary="Запрашиваем все ID с данными", description="Возвращает словарь ID")
-async def db_fetch_id_coordinate():
-    db_handler = database.DatabaseCRUD()
-    db_ids = db_handler.get_all_ids()
-    return db_ids
-
-@app.get("/db-fetch-only-id", summary="Запрашиваем все ID", description="Возвращает словарь ID, Latitude, Longitude, Date")
-async def db_fetch_only_id_coordinate():
-    db_handler = database.DatabaseCRUD()
-    db_ids = db_handler.get_only_ids()
-    return db_ids
-
 @app.put("/upload-image", summary="Загрузка фото в DB", description="Загружает фото и возвращает ID с DB.") #PUT используется для создания или обновления ресурса на сервере
 async def upload_gps_data(
-    latitude: int = Form(...),
-    longitude: int = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
     date: date = Form(...),
     img: UploadFile = File(...),
     x_top_left: int = Form(...),
@@ -152,3 +114,64 @@ async def upload_gps_data(
     #     headers={"imgDB_ID": str(image_id)}
     # )
     return image_id
+
+@app.get("/get-unchecked-image", summary="Получить самую старую непроверенную фотографию", description="Получает фото где необходимо проверить наличие ям.") #PUT используется для создания или обновления ресурса на сервере
+async def get_unchecked_photo():
+    logger = SingletonLogger().get_logger()
+    db_handler = database.ImageDatabaseCRUD()
+    db_ids = db_handler.get_unchecked_photo_id()
+
+    min_id = min(db_ids)
+    logger.debug(f"Min ID: {min_id}")
+    image_data = db_handler.read_image(min_id)  # Получаем (filename, numpy.ndarray)
+
+    if not isinstance(image_data, tuple) or len(image_data) != 2:
+        raise ValueError("Ошибка: read_image() вернул неожиданный формат данных")
+
+    filename, last_photo = image_data  # Разбираем кортеж
+
+    if last_photo is None:
+        raise ValueError("Ошибка: изображение не найдено в базе данных.")
+
+    if not isinstance(last_photo, np.ndarray):
+        raise TypeError(f"Ошибка: ожидается numpy.ndarray, но получен {type(last_photo)}")
+
+    # Проверяем, что изображение в формате uint8
+    if last_photo.dtype != np.uint8:
+        last_photo = last_photo.astype(np.uint8)
+
+    # Кодируем в JPEG
+    success, encoded_image = cv2.imencode('.jpg', last_photo)
+    if not success:
+        raise RuntimeError("Ошибка при кодировании изображения в JPEG")
+
+    # Преобразуем в байты
+    image_bytes = io.BytesIO(encoded_image.tobytes())
+    headers = {"ImageID": str(min_id)}
+    return StreamingResponse(image_bytes, media_type="image/jpeg", headers=headers)
+
+@app.get("/get-confirmed-coordinates", summary="Получить самую старую непроверенную фотографию", description="Получает фото где необходимо проверить наличие ям.") #PUT используется для создания или обновления ресурса на сервере
+async def get_confirmed_coordinates():
+    db_handler = database.ImageDatabaseCRUD()
+    db_ids = db_handler.get_confirmed_coordinates()
+    return db_ids
+
+@app.get("/get-unconfirmed-coordinates", summary="Получить все ID, где status=false", description="Получить все ID, где status=false") #PUT используется для создания или обновления ресурса на сервере
+async def get_confirmed_coordinates():
+    db_handler = database.ImageDatabaseCRUD()
+    db_ids = db_handler.get_unchecked_photo_id()
+    return db_ids
+
+@app.put("/update-status", summary="Обновление статуса фотографий", description="Обновляет статусы в DB.") #PUT используется для создания или обновления ресурса на сервере
+async def update_photo_status(request: UpdateStatusRequest):
+    new_status = request.new_status
+    photo_id = request.photo_id
+    db_handler = database.ImageDatabaseCRUD()
+    if new_status:
+        db_handler.update_status_true(photo_id)
+        return_status = True
+    else:
+        db_handler.delete_image(photo_id)
+        return_status = True
+
+    return return_status
