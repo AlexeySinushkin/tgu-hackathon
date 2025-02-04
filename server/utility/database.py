@@ -1,3 +1,5 @@
+import base64
+
 import psycopg2
 import cv2
 import numpy as np
@@ -5,6 +7,7 @@ from utility.utility import SingletonLogger, LogExecutionTime
 from observer.observer import AuditObserver
 from datetime import date  # Импортируем date
 # Параметры подключения к базе данных
+import json
 conn_params = {
     "dbname": "pyservdb",
     "user": "pyserv",
@@ -31,7 +34,7 @@ class DatabaseConnection:
             self.connection.close()
 
 @LogExecutionTime()
-class DatabaseCRUD(DatabaseConnection):
+class ImageDatabaseCRUD(DatabaseConnection):
     """
     Класс, реализующий операции CRUD для работы с таблицей изображений.
     """
@@ -42,7 +45,7 @@ class DatabaseCRUD(DatabaseConnection):
 
     def _ensure_database_and_table(self):
         """
-        Проверяет наличие базы данных и таблицы gps. Если они отсутствуют, создаёт их.
+        Проверяет наличие базы данных и таблицы neurophotos. Если они отсутствуют, создаёт их.
         """
         logger = SingletonLogger().get_logger()
         try:
@@ -60,15 +63,14 @@ class DatabaseCRUD(DatabaseConnection):
             with DatabaseConnection(self.db_params) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        CREATE TABLE IF NOT EXISTS gps (
+                        CREATE TABLE IF NOT EXISTS neurophotos (
                             id SERIAL PRIMARY KEY,
-                            latitude REAL NOT NULL,
-                            longitude REAL NOT NULL,
-                            data DATE NOT NULL
+                            filename TEXT NOT NULL,
+                            photo BYTEA NOT NULL
                         );
                     """)
                     conn.commit()
-                    logger.info("Table 'gps' ensured to exist.")
+                    logger.info("Table 'neurophotos' ensured to exist.")
         except Exception as e:
             logger.error(f"Error ensuring database and table: {e}")
 
@@ -88,127 +90,149 @@ class DatabaseCRUD(DatabaseConnection):
             return False
 
     @LogExecutionTime()
-    def create_data(self, latitude_data:int, longitude_data:int, data:date) -> int:
+    def create_image(self, filename: str, image: np.ndarray,  latitude:int,
+                     longitude:int, x_top_left:int, y_top_left:int, width:int, height:int, date:date
+                     ) -> int:
         logger = SingletonLogger().get_logger()
         try:
+            _, encoded_image = cv2.imencode('.png', image)
+            binary_data = encoded_image.tobytes()
 
             with DatabaseConnection(self.db_params) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        INSERT INTO gps (latitude, longitude, data)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO neurophotos (filename, photo, latitude, longitude, x_top_left, y_top_left, width, height, date)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING id;
                         """,
-                        (latitude_data, longitude_data, data)
+                        (filename, binary_data, latitude, longitude, x_top_left, y_top_left, width, height, date)  # Преобразуем Python-объект в JSON-строку
                     )
-                    gps_id = cur.fetchone()[0]
+                    image_id = cur.fetchone()[0]
                     conn.commit()
-                    logger.info(f"GPS coordinate created with ID: {gps_id}")
+                    logger.info(f"Image created with ID: {image_id}")
 
                     # Уведомляем AuditObserver
                     self.audit_observer.notify(
                         user="system",
                         action="create_image",
-                        details={"id": gps_id}
+                        details={"id": image_id, "filename": filename}
                     )
-                    return gps_id
+                    return image_id
         except Exception as e:
-            logger.error(f"Error creating GPS coordinate: {e}")
+            logger.error(f"Error creating image: {e}")
             return -1
 
     @LogExecutionTime()
-    def read_data(self, gps_id: int) -> tuple[int, int, date]:
+    def read_image(self, image_id: int) -> tuple[str, np.ndarray]:
         logger = SingletonLogger().get_logger()
+        logger.info(f"Read_Image with ID: {image_id}")
         try:
             with DatabaseConnection(self.db_params) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        SELECT latitude, longitude, data FROM gps WHERE id = %s;
+                        SELECT filename, photo FROM neurophotos WHERE id = %s;
                         """,
-                        (gps_id,)
+                        (image_id,)
                     )
                     row = cur.fetchone()
-                    return row[0], row[1], row[2]
+                    if row:
+                        filename, binary_data = row
+                        np_array = np.frombuffer(binary_data, np.uint8)
+                        image = cv2.imdecode(np_array, cv2.IMREAD_UNCHANGED)
+                        logger.info(f"Image with ID {image_id} read successfully.")
+                        logger.info(f"image name: {filename}")
+                        return filename, image
+                    else:
+                        logger.info(f"Image with ID {image_id} not found.")
+                        return None
         except Exception as e:
-            logger.error(f"Error reading data: {e}")
+            logger.error(f"Error reading image: {e}")
             return None
 
     @LogExecutionTime()
-    def update_data(self, gps_id: int, latitude_data:int, longitude_data:int, data:date) -> bool:
+    def update_image(self, image_id: int, filename: str, image: np.ndarray) -> bool:
         logger = SingletonLogger().get_logger()
         try:
+            _, encoded_image = cv2.imencode('.png', image)
+            binary_data = encoded_image.tobytes()
+
             with DatabaseConnection(self.db_params) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        UPDATE gps
-                        SET latitude = %s, longitude = %s, data = %s
+                        UPDATE neurophotos
+                        SET filename = %s, photo = %s
                         WHERE id = %s;
                         """,
-                        (latitude_data, longitude_data, data, gps_id)
+                        (filename, binary_data, image_id)
                     )
                     conn.commit()
-                    logger.info(f"Image with ID {gps_id} updated successfully.")
+                    logger.info(f"Image with ID {image_id} updated successfully.")
                     return True
         except Exception as e:
             logger.error(f"Error updating image: {e}")
             return False
 
     @LogExecutionTime()
-    def delete_date(self, gps_id: int) -> bool:
+    def delete_image(self, image_id: int) -> bool:
         logger = SingletonLogger().get_logger()
         try:
             with DatabaseConnection(self.db_params) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        DELETE FROM gps
+                        DELETE FROM neurophotos
                         WHERE id = %s;
                         """,
-                        (gps_id,)
+                        (image_id,)
                     )
                     conn.commit()
-                    logger.info(f"GPS coordinate with ID {gps_id} deleted successfully.")
+                    logger.info(f"Image with ID {image_id} deleted successfully.")
 
                     # Уведомляем AuditObserver
                     self.audit_observer.notify(
                         user="system",
                         action="delete_image",
-                        details={"id": gps_id}
+                        details={"id": image_id}
                     )
                     return True
         except Exception as e:
             logger.error(f"Error deleting image: {e}")
             return False
 
-    def get_only_ids(self):
+    @LogExecutionTime()
+    def get_unchecked_photo_id(self):
+        logger = SingletonLogger().get_logger()
         try:
             # Подключение к базе данных
             with DatabaseConnection(self.db_params) as conn:
                 with conn.cursor() as cur:
                     # SQL-запрос для получения всех значений столбца id
-                    cur.execute("SELECT id FROM gps;")
+                    cur.execute("SELECT id FROM neurophotos WHERE status = FALSE;")
 
                     # Получение всех строк результата
                     ids = cur.fetchall()
 
                     # Преобразование результата в список (каждая строка — это кортеж)
                     ids = [row[0] for row in ids]
-
+                    logger.debug(f"Unchecked photo ID: {ids}")
                     return ids
         except Exception as e:
+            logger.error(f"Error getting unchecked photo ID: {e}")
             print(f"Error: {e}")
             return []
 
-    def get_all_ids(self):
+    @LogExecutionTime()
+    def get_confirmed_coordinates(self):
+        logger = SingletonLogger().get_logger()
         try:
             # Подключение к базе данных
             with DatabaseConnection(self.db_params) as conn:
                 with conn.cursor() as cur:
                     # SQL-запрос для получения всех данных
-                    cur.execute("SELECT id, latitude, longitude, data FROM gps;")
+                    cur.execute("SELECT id, latitude, longitude, date FROM neurophotos WHERE status = TRUE;")
 
                     # Получение всех строк результата
                     rows = cur.fetchall()
@@ -223,8 +247,31 @@ class DatabaseCRUD(DatabaseConnection):
                         }
                         for row in rows
                     ]
+                    logger.debug(f"Confirmed coordinates: {results}")
 
                     return results
         except Exception as e:
+            logger.error(f"Error getting confirmed coordinates: {e}")
             print(f"Error: {e}")
             return []
+
+    @LogExecutionTime()
+    def update_status_true(self, image_id: int) -> bool:
+        logger = SingletonLogger().get_logger()
+        try:
+            with DatabaseConnection(self.db_params) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE neurophotos
+                        SET status = TRUE
+                        WHERE id = %s;
+                        """,
+                        (image_id,)
+                    )
+                    conn.commit()
+                    logger.info(f"Image with ID {image_id} updated successfully.")
+                    return True
+        except Exception as e:
+            logger.error(f"Error updating image: {e}")
+            return False
