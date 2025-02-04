@@ -28,8 +28,8 @@ app = FastAPI(
     },
 )
 class GPSUpload(BaseModel):
-    latitude: int
-    longitude: int
+    latitude: float
+    longitude: float
     date: date
     img: str  # base64-кодированное изображение или URL
     x_top_left: int
@@ -37,8 +37,8 @@ class GPSUpload(BaseModel):
 
 class GPSRequest(BaseModel):
     gps_id: int
-    latitude: int
-    longitude: int
+    latitude: float
+    longitude: float
     date: date
 
 # Настройки CORS
