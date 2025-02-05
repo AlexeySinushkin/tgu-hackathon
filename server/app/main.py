@@ -13,7 +13,7 @@ from starlette.responses import JSONResponse
 import utility.database as database
 #import handler.imageProcessor as imgProc
 from utility.utility import SingletonLogger, LogExecutionTime
-from handler.NeuroImageHandler import NeuroImageHandler
+#from handler.NeuroImageHandler import NeuroImageHandler
 import json
 app = FastAPI(
     title="Image Processing API",
@@ -121,6 +121,9 @@ async def get_unchecked_photo():
     db_handler = database.ImageDatabaseCRUD()
     db_ids = db_handler.get_unchecked_photo_id()
 
+    if not db_ids:
+        return JSONResponse(content={}, status_code=204)  # Возвращаем пустой JSON с кодом 204
+
     min_id = min(db_ids)
     logger.debug(f"Min ID: {min_id}")
     image_data = db_handler.read_image(min_id)  # Получаем (filename, numpy.ndarray)
@@ -136,7 +139,7 @@ async def get_unchecked_photo():
     if not isinstance(last_photo, np.ndarray):
         raise TypeError(f"Ошибка: ожидается numpy.ndarray, но получен {type(last_photo)}")
 
-    # Проверяем, что изображение в формате uint8
+    # Преобразуем изображение в uint8 (если необходимо)
     if last_photo.dtype != np.uint8:
         last_photo = last_photo.astype(np.uint8)
 
@@ -145,12 +148,15 @@ async def get_unchecked_photo():
     if not success:
         raise RuntimeError("Ошибка при кодировании изображения в JPEG")
 
-    # Преобразуем в байты
-    image_bytes = io.BytesIO(encoded_image.tobytes())
+    # Создаем новый буфер и записываем туда изображение
+    image_bytes = io.BytesIO()
+    image_bytes.write(encoded_image.tobytes())  # Записываем байты
+    image_bytes.seek(0)  # Перемещаем курсор в начало
+
     headers = {"ImageID": str(min_id)}
     return StreamingResponse(image_bytes, media_type="image/jpeg", headers=headers)
 
-@app.get("/get-confirmed-coordinates", summary="Получить самую старую непроверенную фотографию", description="Получает фото где необходимо проверить наличие ям.") #PUT используется для создания или обновления ресурса на сервере
+@app.get("/get-confirmed-coordinates", summary="Получить все проверенные координаты", description="Получает все координаты где status = true") #PUT используется для создания или обновления ресурса на сервере
 async def get_confirmed_coordinates():
     db_handler = database.ImageDatabaseCRUD()
     db_ids = db_handler.get_confirmed_coordinates()
