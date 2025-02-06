@@ -33,4 +33,4 @@ python -m uvicorn app.main:app --reload
 docker compose up --build
 ```
 После установки будет доступ к backend по адресу:
-http://localhost:8000/docs
+http://localhost:8001/docs
