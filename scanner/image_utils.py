@@ -1,6 +1,8 @@
 import base64
+import unittest
 
 import cv2
+import numpy as np
 
 
 def draw_frame_number(image, frame_number):
@@ -31,3 +33,14 @@ def opencv_to_base64(image):
     # Convert to Base64
     base64_str = base64.b64encode(buffer).decode('utf-8')
     return base64_str
+
+
+
+class Base64Test(unittest.TestCase):
+    def test_base64(self):
+        image = cv2.imread("resources/upload_test.png")
+        image_str = opencv_to_base64(image)
+        decoded_bytes = np.frombuffer(base64.b64decode(image_str), dtype=np.uint8)
+        decoded_image = cv2.imdecode(decoded_bytes, cv2.IMREAD_COLOR)
+        cv2.imshow("encode correct", decoded_image)
+        cv2.waitKey(0)

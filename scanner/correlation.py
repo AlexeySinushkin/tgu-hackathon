@@ -1,7 +1,4 @@
 import numpy as np
-from pyasn1_modules.rfc5280 import anotherNameMap
-from scipy.optimize import curve_fit
-
 #реализация корреляционной функции для референсного ряда
 #ищем приблизительно одинаковые параболы
 
@@ -9,27 +6,6 @@ from scipy.optimize import curve_fit
 def parabola(x, a, b, c):
     return a * x ** 2 + b * x + c
 
-
-# Function to fit a parabola to a histogram
-def fit_parabola(hist):
-    x_values = np.arange(len(hist))  # Bin indices
-    y_values = hist.flatten()  # Histogram counts
-
-    # Fit parabola
-    params, _ = curve_fit(parabola, x_values, y_values)
-
-    return params  # Returns (a, b, c)
-
-def ref_corel_calculate_old(hist1, hist2):
-    # Fit parabolas to both histograms
-    params1 = fit_parabola(hist1)
-    params2 = fit_parabola(hist2)
-    a1 = abs(params1[0])
-    a2 = abs(params2[0])
-    #интересует ширина параболы
-    if a1<a2:
-        return a1/a2
-    return a2/a1
 
 def get_left_right_index(hist):
     # Find indices where histogram is non-zero
