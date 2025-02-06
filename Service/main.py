@@ -1,6 +1,6 @@
 import requests
 import time
-from server.handler.NeuroImageHandler import NeuroImageHandler
+from Service.handler.NeuroImageHandler import NeuroImageHandler
 from utility.utility import SingletonLogger, LogExecutionTime
 
 base_url = "http://176.119.158.23:8001"  # URL сервера
