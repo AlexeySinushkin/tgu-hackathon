@@ -15,7 +15,7 @@ test_video_stream = cv2.VideoCapture("resources/test_video.mp4")
 test_video_search_area = SearchArea(0.2, 0.55, 0.8, 0.65)
 
 period = 1000/frame_rate
-stepping_mode = True
+stepping_mode = False
 analyzer : PotholeAnalyzer | None = None
 frame_index = 0
 while True:
