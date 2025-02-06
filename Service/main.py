@@ -73,4 +73,4 @@ if __name__ == "__main__":
         else:
             logging.info("No image to process")
         
-        time.sleep(300)  # 5 минут
+        time.sleep(10)  # 10 сек
