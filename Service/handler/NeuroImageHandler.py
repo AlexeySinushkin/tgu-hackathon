@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import io
-# # Load the pretrained YOLOv8 Nano model
+# # Load the pretrained YOLOv9  model
 # model = YOLO("'yolov9c-seg.pt")
 #
 # # Perform predictions on an image

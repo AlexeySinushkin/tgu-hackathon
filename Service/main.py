@@ -4,7 +4,7 @@ from Service.handler.NeuroImageHandler import NeuroImageHandler
 from utility.utility import SingletonLogger, LogExecutionTime
 
 base_url = "http://176.119.158.23:8001"  # URL сервера
-CONFIDENCE_THRESHOLD = 0.6  # Порог уверенности для обнаруженных объектов
+CONFIDENCE_THRESHOLD = 0.5  # Порог уверенности для обнаруженных объектов
 
 
 @LogExecutionTime()
