@@ -22,3 +22,4 @@ Cargo.lock
 scanner/__pycache__/
 **/*.DS_Store
 client/node_modules
+/approve-service/.venv
