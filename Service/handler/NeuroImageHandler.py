@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import io
 # # Load the pretrained YOLOv8 Nano model
-# model = YOLO("yolo11n_road_damage.pt")
+# model = YOLO("'yolov9c-seg.pt")
 #
 # # Perform predictions on an image
 # results = model.predict(source="test1.png", save=True, imgsz=640)
