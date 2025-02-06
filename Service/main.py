@@ -1,10 +1,12 @@
 import requests
 import time
-from server.handler.NeuroImageHandler import NeuroImageHandler
+from Service.handler.NeuroImageHandler import NeuroImageHandler
 from utility.utility import SingletonLogger, LogExecutionTime
 
-base_url = "http://176.119.158.23:8001" # URL of the server
+base_url = "http://176.119.158.23:8001"  # URL сервера
 CONFIDENCE_THRESHOLD = 0.5  # Порог уверенности для обнаруженных объектов
+
+
 @LogExecutionTime()
 class DatabaseWorker:
     def __init__(self, url):
@@ -34,11 +36,21 @@ class DatabaseWorker:
             logging.error(e)
             print(e)
 
-    def update_status(self, photo_id:int,status:bool):
-
+    def update_status(self, photo_id: int, status: bool):
+        logging = SingletonLogger().get_logger()
         try:
-            logging.info("Sending request to the server")
+            logging.info("Sending request to update image status")
             response = requests.put(self.url + "/update-status", json={"photo_id": photo_id, "new_status": status})
+            return response.text
+        except requests.exceptions.RequestException as e:
+            logging.error(e)
+            print(e)
+
+    def delete_image(self, photo_id: int):
+        logging = SingletonLogger().get_logger()
+        try:
+            logging.info(f"Sending request to delete image with ID: {photo_id}")
+            response = requests.delete(self.url + "/delete-image", json={"photo_id": photo_id})
             return response.text
         except requests.exceptions.RequestException as e:
             logging.error(e)
@@ -46,21 +58,20 @@ class DatabaseWorker:
 
 
 if __name__ == "__main__":
-
-        #print("No image to process")
-      while True:
+    while True:
         logging = SingletonLogger().get_logger()
         database_handler = DatabaseWorker(base_url)
+
         server_response = database_handler.get_image()
         logging.debug(f"Server response: {server_response}")
-        
+
         if server_response is not None:
             photo_id = server_response.headers.get("imageid")
             handler = NeuroImageHandler()
             boxes, confidences = handler.process_image(server_response.content)  # Обновлено для получения уверенности
-            
+
             logging.debug(f"Boxes: {boxes}, Confidences: {confidences}")
-            
+
             if boxes is None or all(conf < CONFIDENCE_THRESHOLD for conf in confidences):
                 logging.info("No objects detected or confidence below threshold")
                 database_handler.update_status(photo_id=photo_id, status=False)
@@ -68,9 +79,9 @@ if __name__ == "__main__":
             else:
                 logging.info("Objects detected with sufficient confidence")
                 database_handler.update_status(photo_id=photo_id, status=True)
-                # Здесь  нужно возвращать данные?
-            
+                # Здесь можно вернуть данные или обработать их дальше
+
         else:
             logging.info("No image to process")
-        
+
         time.sleep(10)  # 10 сек
