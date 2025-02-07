@@ -22,3 +22,9 @@ class FoundPotholeImageProcessor(threading.Thread):
 
     def stop(self):
         self.do_run = False
+
+    def await_and_stop(self):
+        while self.do_run:
+            if len(self.queue) > 0:
+                time.sleep(1)
+        self.stop()
