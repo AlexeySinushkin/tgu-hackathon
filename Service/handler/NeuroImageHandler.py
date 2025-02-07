@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import io
-# # Load the pretrained YOLOv8 Nano model
+# # Load the pretrained YOLOv9  model
 # model = YOLO("'yolov9c-seg.pt")
 #
 # # Perform predictions on an image
@@ -20,7 +20,7 @@ import io
 
 class NeuroImageHandler:
     def __init__(self):
-        self.model = YOLO("handler/best.pt")
+        self.model = YOLO("handler/yolo11n_road_damage.pt")
 
     def process_image(self, image_bytes: bytes) -> list:
         # Преобразуем байты изображения в numpy array

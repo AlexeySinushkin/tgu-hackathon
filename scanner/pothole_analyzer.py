@@ -54,9 +54,16 @@ class Cell:
         return color
 
 
-class AnalyzeResult:
-    left_column: int
-    right_column: int
+class FoundRegion:
+    x_left_top: int
+    y_left_top: int
+    width: int
+    height: int
+    def __init__(self, cell):
+        self.x_left_top = cell.x_lt
+        self.y_left_top = cell.y_lt
+        self.width = cell.width*2
+        self.height = cell.height*2
 
 
 class PotholeAnalyzer:
@@ -90,13 +97,14 @@ class PotholeAnalyzer:
                 self.search_grid.append(row)
 
 
-    def analyze_and_draw(self, image_for_analyze, image_for_draw):
+    def analyze_and_draw(self, image_for_analyze, image_for_draw) -> FoundRegion | None:
         self.__reset_cells()
         analyze_success = self.analyze(image_for_analyze)
         # рисуем референсный ряд
         for cell in self.reference_row:
             cv2.rectangle(image_for_draw, (cell.x_lt, cell.y_lt), (cell.x_lt + cell_size, cell.y_lt + cell_size),
                           (0, 0, 0), 1)
+        result = None
         for row in self.search_grid:
             for cell in row:
                 if analyze_success and cell.second_color_intensity>0.3:
@@ -104,6 +112,8 @@ class PotholeAnalyzer:
                     correl_value = int(cell.second_color_intensity*10)
                     draw_correl_value(image_for_draw, correl_value, cell.x_lt + 5, int(cell.y_lt+cell_size/2))
                     cv2.rectangle(image_for_draw, (cell.x_lt, cell.y_lt), (cell.x_lt + cell_size, cell.y_lt + cell_size), cell.get_color(), 1)
+                    result = FoundRegion(cell)
+        return result
 
     def __reset_cells(self):
         for row in self.search_grid:

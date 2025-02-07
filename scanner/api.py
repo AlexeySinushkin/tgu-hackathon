@@ -1,11 +1,17 @@
-import base64
 import unittest
 from datetime import datetime
 
 import cv2
 import requests
+import logging
 
 from image_utils import opencv_to_base64
+
+
+base_url = "http://176.119.158.23:8001"
+upload_url = f"{base_url}/upload-gps-data"
+date_format = "%Y-%m-%d"
+
 
 
 class FakeGPSCoordinateService:
@@ -28,34 +34,45 @@ class FakeGPSCoordinateService:
             self.gps_coordinate_index=0
         return result
 
-
-
-base_url = "http://176.119.158.23:8001"
-upload_url = f"{base_url}/push_coordinate"
-date_format = "%Y-%m-%d"
 gps_coordinates_service = FakeGPSCoordinateService()
 
+class ImageForUpload:
+    latitude: float
+    longitude: float
+    event_date: datetime
+    x_top_left: int
+    y_top_left: int
+    def __init__(self, image, x, y, width, height):
+        latitude, longitude = gps_coordinates_service.get_current_position()
+        self.latitude = latitude
+        self.longitude = longitude
+        self.event_date = datetime.now()
+        self.image = image
+        self.x_top_left = x
+        self.y_top_left = y
+        self.width = width
+        self.height = height
 
-def upload(image, x, y, width, height):
-    latitude, longitude = gps_coordinates_service.get_current_position()
-    now = datetime.now().strftime(date_format)
-    img = opencv_to_base64(image)
+
+def upload(image: ImageForUpload):
     body = {
-        "latitude": latitude,
-        "longitude": longitude,
-        "date": now,
-        "img": img,
-        "x_top_left": x,
-        "y_top_left": y
+        "latitude": image.latitude,
+        "longitude": image.longitude,
+        "date": image.event_date.strftime(date_format),
+        "img": opencv_to_base64(image.image),
+        "x_top_left": image.x_top_left,
+        "y_top_left": image.y_top_left
     }
+    logging.debug("attempt to send image")
     response = requests.post(upload_url, json=body)
     if response.status_code == 200:
         print(response.json())  # Parse JSON response
     else:
         print(f"Error: {response.status_code}")
-        response.raise_for_status()
+        logging.error(response.text)
 
 class UploadTest(unittest.TestCase):
     def test_upload(self):
         image = cv2.imread("resources/upload_test.png")
-        upload(image, 298, 576, 534,938)
+        image_for_upload = ImageForUpload(image, 298, 576, 534,938)
+        upload(image_for_upload)
