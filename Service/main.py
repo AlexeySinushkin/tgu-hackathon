@@ -1,6 +1,6 @@
 import requests # Импортируем библиотеку для выполнения HTTP-запросов
 import time  # Импортируем библиотеку для работы с временем
-from Service.handler.NeuroImageHandler import NeuroImageHandler # Импортируем класс для обработки изображений
+from handler.NeuroImageHandler import NeuroImageHandler # Импортируем класс для обработки изображений
 from utility.utility import SingletonLogger, LogExecutionTime  # Импортируем логгер и декоратор для измерения времени выполнения
 
 base_url = "http://176.119.158.23:8001"  # URL сервера
@@ -14,7 +14,7 @@ class DatabaseWorker:
 
     def test_connection(self):
         logging = SingletonLogger().get_logger() # Получаем логгер
-         logging.info("Testing connection to the database") # Логируем информацию о тестировании соединения
+        logging.info("Testing connection to the database") # Логируем информацию о тестировании соединения
         try:
             logging.info("Sending request to the server") # Логируем информацию о запросе к серверу
             response = requests.get(self.url + "/db-test")# Отправляем GET-запрос на тестирование соединения
@@ -68,11 +68,11 @@ if __name__ == "__main__":
         if server_response is not None:  # Если изображение получено
             photo_id = server_response.headers.get("imageid") # Извлекаем ID изображения из заголовков ответа
             handler = NeuroImageHandler() # Создаем экземпляр обработчика изображений
-            boxes, confidences = handler.process_image(server_response.content)  # Обрабатываем изображение и получаем координаты объектов и их уверенность
+            all_boxes = handler.process_image(server_response.content)  # Обрабатываем изображение и получаем координаты объектов и их уверенность
 
-            logging.debug(f"Boxes: {boxes}, Confidences: {confidences}") # Логируем координаты объектов и их уверенность
+            logging.debug(f"Boxes: {all_boxes}") # Логируем координаты объектов и их уверенность
 
-            if boxes is None or all(conf < CONFIDENCE_THRESHOLD for conf in confidences):  # Если объекты не обнаружены или их уверенность ниже порога
+            if len(all_boxes) == 0 or all(box["confidence"] < CONFIDENCE_THRESHOLD for box in all_boxes):  # Если объекты не обнаружены или их уверенность ниже порога
                 logging.info("No objects detected or confidence below threshold")
                 database_handler.update_status(photo_id=photo_id, status=False) # Обновляем статус изображения на 'необработано'
                 database_handler.delete_image(photo_id)  # Удаляем изображение
