@@ -66,7 +66,7 @@ if __name__ == "__main__":
         logging.debug(f"Server response: {server_response}") # Логируем ответ сервера
 
         if server_response is not None:  # Если изображение получено
-            photo_id = server_response.headers.get("imageid") Извлекаем ID изображения из заголовков ответа
+            photo_id = server_response.headers.get("imageid") # Извлекаем ID изображения из заголовков ответа
             handler = NeuroImageHandler() # Создаем экземпляр обработчика изображений
             boxes, confidences = handler.process_image(server_response.content)  # Обрабатываем изображение и получаем координаты объектов и их уверенность
 
@@ -79,9 +79,9 @@ if __name__ == "__main__":
             else:
                 logging.info("Objects detected with sufficient confidence")
                 database_handler.update_status(photo_id=photo_id, status=True) # Обновляем статус изображения на 'обработано'
-                # Здесь можно вернуть данные или обработать их дальше
+             
 
         else:
             logging.info("No image to process") # Логируем, что изображений для обработки нет
 
-        time.sleep(10)  # # Задержка в 10 секунд перед следующей итерацией цикла
+        time.sleep(10)  # Задержка в 10 секунд перед следующей итерацией цикла
