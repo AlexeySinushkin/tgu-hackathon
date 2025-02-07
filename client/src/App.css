@@ -21,3 +21,7 @@
 .leaflet-bottom.leaflet-right {
   display: none;
 }
+
+p {
+  color: black;
+}

@@ -34,10 +34,10 @@ function App() {
   }
 
   if (data.length < 2) {
-    return <p>Недостаточно данных</p>;
+    setData(coordinates);
   }
 
-  return <MapComponent coordinates={coordinates} />;
+  return <MapComponent coordinates={data} />;
 }
 
 export default App;
