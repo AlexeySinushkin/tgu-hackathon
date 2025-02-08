@@ -70,7 +70,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```
-4. запуск клиента - проверка звукового оповещения
+4. запуск клиента - проверка оповещения
 ```aiignore
 cd client
 npm install
