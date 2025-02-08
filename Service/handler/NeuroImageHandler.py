@@ -20,7 +20,7 @@ import io
 
 class NeuroImageHandler:
     def __init__(self):
-        self.model = YOLO("handler/yolo11n_road_damage.pt")
+        self.model = YOLO("handler/best.pt")
 
     def process_image(self, image_bytes: bytes) -> list:
         # Преобразуем байты изображения в numpy array
@@ -31,6 +31,19 @@ class NeuroImageHandler:
         results = self.model.predict(source=img, save=False, imgsz=640)
         all_boxes = []
         for result in results:
-            boxes = result.boxes  # Список всех обнаруженных объектов (bounding boxes)
-            all_boxes.extend(boxes)
+            for box in result.boxes:
+                # Получаем координаты bbox, вероятность и класс
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                confidence = float(box.conf[0])
+                class_id = int(box.cls[0])
+
+                all_boxes.append({
+                    "x1": x1,
+                    "y1": y1,
+                    "x2": x2,
+                    "y2": y2,
+                    "confidence": confidence,
+                    "class_id": class_id
+                })
+
         return all_boxes

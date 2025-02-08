@@ -59,5 +59,6 @@ while True:
         cv2.destroyAllWindows()
         break
 test_video_stream.release()
-image_processor.stop()
+cv2.destroyAllWindows()
+image_processor.await_and_stop()
 

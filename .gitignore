@@ -24,3 +24,6 @@ scanner/__pycache__/
 client/node_modules
 /approve-service/.venv
 scanner/app.log
+server/handler/__pycache__/NeuroImageHandler.cpython-312.pyc
+/Service/handler/__pycache__
+/Service/utility/__pycache__

@@ -1,12 +1,16 @@
 
 ## АнтиЯма
-Проложение по поведению похожее на антирадар
+Приложение по поведению похожее на антирадар
 
 Только в нашем случае приложение предупреждает о яме на дороге.
 Может показаться что их и так видно, но если водитель едет в незнакомой местности 
 в сумерках и в непогоду, то разглядеть яму бывает очень сложно.
 
 Эта система может работать как отдельно, так и в паре с навигатором.
+### Необходимые компоненты
+
+- Python 3.9+ - https://www.python.org/downloads/
+- Node.js - https://nodejs.org/en/download/
 
 ### Составные части
 - **Сканер** - это телефон на базе андроида, который может использоваться как видеорегистратор и параллельно выполнять сканирование
@@ -47,7 +51,7 @@
 cd server
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requrements.txt
+pip install -r requirements.txt
 python -m uvicorn app.main:app 
 ```
 2. сканирование тестового видеофайла из директории /scanner/resources/test_video.mp4
@@ -55,7 +59,7 @@ python -m uvicorn app.main:app
 cd scanner
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requrements.txt
+pip install -r requirements.txt
 python main.py
 ```
 3. подтверждение найденных изображений нейросетью
@@ -63,14 +67,13 @@ python main.py
 cd Service
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requrements.txt
+pip install -r requirements.txt
 python main.py
 ```
-3. запуск клиента - проверка звукового оповещения
+4. запуск клиента - проверка звукового оповещения
 ```aiignore
 cd client
 npm install
-npm run build
 npm run dev
 ```
 
