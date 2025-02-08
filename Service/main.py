@@ -75,7 +75,7 @@ if __name__ == "__main__":
             if len(all_boxes) == 0 or all(box["confidence"] < CONFIDENCE_THRESHOLD for box in all_boxes):  # Если объекты не обнаружены или их уверенность ниже порога
                 logging.info("No objects detected or confidence below threshold")
                 database_handler.update_status(photo_id=photo_id, status=False) # Обновляем статус изображения на 'необработано'
-                database_handler.delete_image(photo_id)  # Удаляем изображение
+
             else:
                 logging.info("Objects detected with sufficient confidence")
                 database_handler.update_status(photo_id=photo_id, status=True) # Обновляем статус изображения на 'обработано'
