@@ -4,7 +4,7 @@ from handler.NeuroImageHandler import NeuroImageHandler # Импортируем
 from utility.utility import SingletonLogger, LogExecutionTime  # Импортируем логгер и декоратор для измерения времени выполнения
 
 base_url = "http://176.119.158.23:8001"  # URL сервера
-CONFIDENCE_THRESHOLD = 0.5  # Порог уверенности для обнаруженных объектов (если ниже, объект считается нераспознанным)
+CONFIDENCE_THRESHOLD = 0.3  # Порог уверенности для обнаруженных объектов (если ниже, объект считается нераспознанным)
 
 
 @LogExecutionTime() # Декоратор для измерения времени выполнения класса
