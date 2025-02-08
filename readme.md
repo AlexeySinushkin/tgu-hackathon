@@ -51,7 +51,7 @@
 cd server
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requrements.txt
+pip install -r requirements.txt
 python -m uvicorn app.main:app 
 ```
 2. сканирование тестового видеофайла из директории /scanner/resources/test_video.mp4
@@ -59,7 +59,7 @@ python -m uvicorn app.main:app
 cd scanner
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requrements.txt
+pip install -r requirements.txt
 python main.py
 ```
 3. подтверждение найденных изображений нейросетью
@@ -67,7 +67,7 @@ python main.py
 cd Service
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requrements.txt
+pip install -r requirements.txt
 python main.py
 ```
 4. запуск клиента - проверка звукового оповещения
