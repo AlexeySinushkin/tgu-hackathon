@@ -37,7 +37,7 @@ function App() {
     setData(coordinates);
   }
 
-  return <MapComponent coordinates={data} />;
+  return <MapComponent coordinates={coordinates} />;
 }
 
 export default App;
